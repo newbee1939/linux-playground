@@ -13,6 +13,7 @@
 ```console
 $ brew install lima
 $ limactl start --name=lip ./lima.yaml
+$ limactl restart lip                  # 追加したグループ（kvm など）を反映させる
 $ limactl shell lip
 $ cd ~/linux-in-practice-2nd
 ```
