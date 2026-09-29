@@ -1,0 +1,37 @@
+# Lima 公式の Ubuntu 20.04 イメージ設定を継承する（Mac に合わせて arm64 版が選ばれる）
+base:
+- template:_images/ubuntu-20.04
+# macOS 標準の仮想化機能（Virtualization.framework）で VM を動かす。QEMU より軽くて速い
+vmType: vz
+# VM の中でさらに KVM で VM を動かせるようにする（本書の仮想化の章用。Apple M3 以降・macOS 15 以降）
+nestedVirtualization: true
+# Mac のフォルダを VM から見えるようにする設定
+mounts:
+# このリポジトリだけを共有する。VM 内でも同じパスで見える
+- location: "~/work/linux-playground"
+  # VM 内から書き込めるようにする（実験コードやメモを Mac 側に残すため）
+  writable: true
+# VM を初めて起動したときに 1 回だけ実行されるスクリプト
+provision:
+# root 権限で実行する（だから sudo は要らない）
+- mode: system
+  script: |
+    #!/bin/bash
+    # 途中で失敗したら止める(-e)、未定義の変数はエラー(-u)、実行した行を表示(-x)、パイプ途中の失敗も検知(pipefail)
+    set -eux -o pipefail
+    # apt が途中で質問して止まらないようにする
+    export DEBIAN_FRONTEND=noninteractive
+    # 本書 README の `sudo apt update` に相当。パッケージ一覧を最新にする
+    apt-get update
+    # 本書 README の `sudo apt install ...` に相当。-y で確認に自動で yes と答える
+    apt-get install -y binutils build-essential golang sysstat python3-matplotlib python3-pil fonts-takao fio qemu-kvm virt-manager libvirt-clients virtinst jq docker.io containerd libvirt-daemon-system
+    # 本書 README の `sudo adduser ... libvirt/libvirt-qemu/kvm` 3 行に相当。
+    # root で動くので `id -un` だと root になってしまう。代わりに Lima が {{.User}} を自分のユーザー名に置き換える
+    usermod -aG libvirt,libvirt-qemu,kvm {{.User}}
+# 自分のユーザー権限で実行する
+- mode: user
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    # 本書のコードをホームに clone する（すでにあれば何もしない）
+    [ -d ~/linux-in-practice-2nd ] || git clone https://github.com/satoru-takeuchi/linux-in-practice-2nd ~/linux-in-practice-2nd
